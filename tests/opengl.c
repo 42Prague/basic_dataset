@@ -6,7 +6,7 @@
 /*   By: okraus <okraus@student.42prague.com>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/01 13:56:03 by okraus            #+#    #+#             */
-/*   Updated: 2024/04/01 14:12:08 by okraus           ###   ########.fr       */
+/*   Updated: 2024/04/01 15:16:11 by okraus           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,27 +26,36 @@
 
 void display()
 {
- glClear(GL_COLOR_BUFFER_BIT);
- glColor3f(1,0,0);
- glBegin(GL_POLYGON);
- glVertex2f(100,300);
- glVertex2f(100,100);
- glVertex2f(200,100);
- glVertex2f(200,300);
- glEnd();
- glFlush();
- glutSwapBuffers();
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(1,0,0);
+	glBegin(GL_POLYGON);
+	glVertex2f(100,300);
+	glVertex2f(100,100);
+	glVertex2f(200,100);
+	glVertex2f(200,300);
+	glEnd();
+	glFlush();
+	glutSwapBuffers();
 }
 
-int main(int argc, char** argv)
-{ 
- glutInit(&argc, argv);
- glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
- glutInitWindowSize(640,640);
- glutCreateWindow("OpenGL");
- glutDisplayFunc(display);
- gluOrtho2D(0,640,0,640);
- glClearColor(0.5,0.7,0.5,0);
- glutMainLoop();
- return 0;
+int	main(int argc, char** argv)
+{	
+	glutInit(&argc,	argv);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
+	glutInitWindowSize(640,640);
+	glutCreateWindow("OpenGL");
+	glutDisplayFunc(display);
+	gluOrtho2D(0,640,0,640);
+	glClearColor(0.5,0.7,0.5,0);
+	glutMainLoop();
+	return 0;
 }
+
+//read jpg image
+//read emoji image
+//window size of image
+//scan image size - emoji size
+//compare for each position (do not compare transparent pixels of emoji)
+//display rectangle every 50 ms
+//display green rectangle for exact match
+//display yellow rectangle for the best match so far
