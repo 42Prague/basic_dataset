@@ -6,7 +6,7 @@
 /*   By: okraus <okraus@student.42prague.com>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/01 13:56:03 by okraus            #+#    #+#             */
-/*   Updated: 2024/04/01 15:16:11 by okraus           ###   ########.fr       */
+/*   Updated: 2024/04/01 16:26:07 by okraus           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,16 +24,23 @@
 // --OpenGL Code--
 #include <GL/glut.h>
 
+int	y;
+int	x;
+
 void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-	glColor3f(1,0,0);
-	glBegin(GL_POLYGON);
-	glVertex2f(100,300);
-	glVertex2f(100,100);
-	glVertex2f(200,100);
-	glVertex2f(200,300);
-	glEnd();
+	for(y=639;y>=0;y--)
+	{
+		for(x=0;x<640;x++)
+		{
+			glColor3f((x % 256) / 255., 0, ((640 - y) % 256) / 255.);
+			glPointSize(8);
+			glBegin(GL_POINTS);
+			glVertex2i(x,y);
+			glEnd();
+		}
+	}
 	glFlush();
 	glutSwapBuffers();
 }
