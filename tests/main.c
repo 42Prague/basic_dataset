@@ -6,7 +6,7 @@
 /*   By: okraus <okraus@student.42prague.com>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/01 15:57:24 by okraus            #+#    #+#             */
-/*   Updated: 2024/04/01 17:26:54 by okraus           ###   ########.fr       */
+/*   Updated: 2024/04/02 13:50:16 by okraus           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -112,9 +112,14 @@ unsigned long	calculatevalue(int xi, int yi)
 	{
 		for (int x = 0; x < 50; x++)
 		{
-			value += abs_difference(g_solver.img.pixels[(yi + y) * (g_solver.img.line) + ((xi + x) * 3) + 0], g_solver.emoji.pixels[y * g_solver.emoji.line + (x * 3) + 0]);
-			value += abs_difference(g_solver.img.pixels[(yi + y) * (g_solver.img.line) + ((xi + x) * 3) + 1], g_solver.emoji.pixels[y * g_solver.emoji.line + (x * 3) + 1]);
-			value += abs_difference(g_solver.img.pixels[(yi + y) * (g_solver.img.line) + ((xi + x) * 3) + 2], g_solver.emoji.pixels[y * g_solver.emoji.line + (x * 3) + 2]);
+			if (g_solver.emoji.alpha && g_solver.emoji.pixels[y * g_solver.emoji.line + (x * g_solver.emoji.channels) + 3] < 255)
+				continue ;
+			else
+			{
+				value += abs_difference(g_solver.img.pixels[(yi + y) * (g_solver.img.line) + ((xi + x) * g_solver.img.channels) + 0], g_solver.emoji.pixels[y * g_solver.emoji.line + (x * g_solver.emoji.channels) + 0]);
+				value += abs_difference(g_solver.img.pixels[(yi + y) * (g_solver.img.line) + ((xi + x) * g_solver.img.channels) + 1], g_solver.emoji.pixels[y * g_solver.emoji.line + (x * g_solver.emoji.channels) + 1]);
+				value += abs_difference(g_solver.img.pixels[(yi + y) * (g_solver.img.line) + ((xi + x) * g_solver.img.channels) + 2], g_solver.emoji.pixels[y * g_solver.emoji.line + (x * g_solver.emoji.channels) + 2]);
+			}
 		}
 	}
 	return (value);
@@ -124,12 +129,16 @@ void	solve(void)
 {
 	int	w;
 	int	h;
+	int	x;
+	int	y;
+	int	stop;
+	//break to show current result
 
 	w = g_solver.img.width - g_solver.emoji.width;
 	h = g_solver.img.height - g_solver.emoji.height;
-	for (int y = 0; y < h; y++)
+	for (y = g_solver.current.y; y <= h; y++)
 	{
-		for (int x = 0; x < h; x++)
+		for (x = g_solver.current.x; x <= w; x++)
 		{
 			g_solver.current.x = x;
 			g_solver.current.y = y;
@@ -139,6 +148,7 @@ void	solve(void)
 				g_solver.bestmatchsofar = g_solver.current;
 			}
 		}
+		g_solver.current.x = 0;
 		printf("line %3i/%3i scanned \n", y, h);
 	}
 	printf("x = %u, y = %u, dif = %lu\n", g_solver.bestmatchsofar.x, g_solver.bestmatchsofar.y, g_solver.bestmatchsofar.value);
@@ -146,18 +156,47 @@ void	solve(void)
 
 void display()
 {
+	//calculate for 100 ms
+	//display current position
+	int	r;
+	int	g;
+	int	b;
+	int	a;
 	glClear(GL_COLOR_BUFFER_BIT);
-	for(int y=639;y>=0;y--)
+	for(int y=g_solver.img.height;y>=0;y--)
 	{
-		for(int x=0;x<640;x++)
+		for(int x=0;x<g_solver.img.width ;x++)
 		{
-			glColor3f((x % 256) / 255., 0, ((640 - y) % 256) / 255.);
-			glPointSize(8);
+			r = g_solver.img.pixels[(g_solver.img.height - y) * (g_solver.img.line) + (x * g_solver.img.channels) + 0];
+			g = g_solver.img.pixels[(g_solver.img.height - y) * (g_solver.img.line) + (x * g_solver.img.channels) + 1];
+			b = g_solver.img.pixels[(g_solver.img.height - y) * (g_solver.img.line) + (x * g_solver.img.channels) + 2];
+			(void)a;
+			glColor3f(r / 255., g / 255., b / 255.);
+			glPointSize(1);
 			glBegin(GL_POINTS);
 			glVertex2i(x,y);
 			glEnd();
 		}
 	}
+	glColor3f(0, 1, 0);
+	glPointSize(8);
+	glLineWidth(4);
+	glBegin(GL_LINES); 
+	glVertex2i(g_solver.bestmatchsofar.x, g_solver.img.height - g_solver.bestmatchsofar.y); 
+	glVertex2i(g_solver.bestmatchsofar.x + g_solver.emoji.width, g_solver.img.height - g_solver.bestmatchsofar.y);
+	glEnd();
+	glBegin(GL_LINES); 
+	glVertex2i(g_solver.bestmatchsofar.x + g_solver.emoji.width, g_solver.img.height - g_solver.bestmatchsofar.y);
+	glVertex2i(g_solver.bestmatchsofar.x + g_solver.emoji.width, g_solver.img.height - g_solver.bestmatchsofar.y - g_solver.emoji.height);
+	glEnd();
+	glBegin(GL_LINES); 
+	glVertex2i(g_solver.bestmatchsofar.x, g_solver.img.height - g_solver.bestmatchsofar.y); 
+	glVertex2i(g_solver.bestmatchsofar.x, g_solver.img.height - g_solver.bestmatchsofar.y - g_solver.emoji.height);
+	glEnd();
+	glBegin(GL_LINES); 
+	glVertex2i(g_solver.bestmatchsofar.x, g_solver.img.height - g_solver.bestmatchsofar.y - g_solver.emoji.height);
+	glVertex2i(g_solver.bestmatchsofar.x + g_solver.emoji.width, g_solver.img.height - g_solver.bestmatchsofar.y - g_solver.emoji.height);
+	glEnd();
 	glFlush();
 	glutSwapBuffers();
 }
@@ -166,17 +205,21 @@ int	main(int argc, char** argv)
 {
 	if (argc != 3)
 		return (1);
-	if (init_data(argv[1], argv[2]))
+	if (init_data(argv[1], argv[2])) //we need two arguments
 		return (2);
+	if (g_solver.img.width < g_solver.emoji.width || g_solver.img.height < g_solver.emoji.height) // image cannot be smaller than the emoji we look for
+		return (3);
 	solve();
 	glutInit(&argc,	argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-	glutInitWindowSize(640,640);
+	glutInitWindowSize(g_solver.img.width, g_solver.img.height);
 	glutInitWindowPosition(200,200);
 	glutCreateWindow("OpenGL");
 	glutDisplayFunc(display);
-	gluOrtho2D(0,640,0,640);
+	gluOrtho2D(0,g_solver.img.width,0,g_solver.img.height);
 	glClearColor(0.5,0.7,0.5,0);
 	glutMainLoop();
+	free(g_solver.img.pixels);
+	free(g_solver.emoji.pixels);
 	return 0;
 }
