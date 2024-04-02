@@ -1,0 +1,3 @@
+[submodule "solution/Libft"]
+	path = solution/Libft
+	url = git://ljiriste.work/Libft
