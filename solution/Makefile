@@ -47,8 +47,10 @@ endif
 clean :
 	$(RM) $(OBJECTS)
 
-fclean : clean
+fclean :
+	$(RM) $(OBJECTS)
 	$(RM) $(NAME)
+	$(foreach proj, $(SUBPROJECTS), $(MAKE) -C $(proj) fclean)
 
 re : fclean
 	$(MAKE) all
