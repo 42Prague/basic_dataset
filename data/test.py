@@ -1,61 +1,88 @@
 import matplotlib as plt
 import cv2 as cv
 import numpy as np
-import time
+import csv
+import re
 
+#Compares the current area of interest with the emoji
 def checkForEmoji(img, emoji, X, Y):
     roi = img[Y:Y+50, X:X+50]
     diff = cv.subtract(roi, emoji)
-    # diff = diff.astype(np.uint8)
-    # print(np.count_nonzero(diff))
-    if np.count_nonzero(diff) < 3100:
-        # print(diff)
-        # cv.imshow('a', roi)
-        # cv.waitKey(0)
-        return True
-    return False
+    diff = diff.astype(np.uint8)
+    if np.count_nonzero(diff) < 2700:
+        return X, Y
+    return -1, -1
 
-img = cv.imread('./dataset/emoji_10.jpg')
-if img is None:
-    print('Is broken')
+# Checking of all the different squares
+def checkSquares(img, emoji, i, j, i2, j2):
+    check = checkForEmoji(img, emoji, j, i)
+    if check[0] != -1 and check[1] != -1:
+        return check
+    check = checkForEmoji(img, emoji, j2, i)
+    if check[0] != -1 and check[1] != -1:
+        return check
+    check = checkForEmoji(img, emoji, j, i2) 
+    if check[0] != -1 and check[1] != -1:
+        return check
+    check = checkForEmoji(img, emoji, j2, i2)
+    return check 
 
-emoji = cv.imread('emoji.jpg')
+files = []
+
+# Read from the csv file to create a list of files, 
+# since not all numbers are there and the indexes don't correspond to the file names
+with open('labels.csv', newline='') as csvfile:
+    csv_reader = csv.reader(csvfile, delimiter=" ")
+    for row in csv_reader:
+        match = re.search(';.+jpg', row[0])
+        if match != None:
+            files.append(match.group(0)[1:])
+
+# Load the emoji file that I'm finding match to
+emoji = cv.imread('emoji4.png')
 if emoji is None:
     print('Is broken')
+height = 600
+width = 800
 
-clone = img.copy()
+for file in files:
+    print(file)
 
-height, width, depth = img.shape
+k = 0
+check = -1, -1
 
-for k in range(0, 100):
-    path = "./dataset/emoji_" + str(k) + ".jpg"
-    img = cv.imread(path)
-    for i in range (205, height - 50):
-        for j in range (0, width - 50):
-            check = checkForEmoji(img, emoji, j, i)
-            if check == True:
-                print("Emoji ", end="")
-                print(k, end=": ")
-                print(j, end=" ")
-                print(i)
+for file in files: # Loop through all images
+    img = cv.imread('./dataset/' + file)
+    clone = img.copy() # Create deep copy for purposes of displaying rectangle
+    for i in range (0, height // 2):
+        i2 = i + height // 2 - 50   # Sets the second square axis
+        if i2 > 550:                # And checks so it doesn't run out of bounds
+            i2 = 550
+        for j in range (0, width // 2):
+            j2 = j + width // 2 - 50 # Again setting the second square axis
+            if j2 > 750:
+                j2 = 750
+            check = checkSquares(img, emoji, i, j, i2, j2) # Checks if any of the squares contain emoji, if yes, return coordinates
+            if check[0] != -1 and check[1] != -1:
+                print("%d,%s,['happy'],[%d],[%d]" % (k, file, check[0], check[1]))
+                k += 1
+                cv.rectangle(img, (check[0], check[1]), (check[0] + 50, check[1] + 50), color=(0,255,0))  # Uncomment this to show found image
+                cv.imshow('Found', img)
+                cv.waitKey(0)
+                exit()
                 break
-        if check == True:
-            check = False
+            if i % 4 == 0 and j % 4 == 0: # Uncomment this to show the moving squares, except it's a bit slow, so it doesn't show on every pixel refresh
+                cv.rectangle(img, (j, i), (j + 50, i + 50), color=(0,0,255))
+                cv.rectangle(img, (j2, i), (j2 + 50, i + 50), color=(0,0,255))
+                cv.rectangle(img, (j, i2), (j + 50, i2 + 50), color=(0,0,255))
+                cv.rectangle(img, (j2, i2), (j2 + 50, i2 + 50), color=(0,0,255))
+                cv.imshow('test', img)
+                key = cv.waitKey(1)
+                if key == 27: #if ESC is pressed, exit loop
+                    cv.destroyAllWindows()
+                    exit()
+                img = clone.copy()
+        if check[0] != -1 and check[1] != -1:
+            check = -1, -1
             break
-                # cv.rectangle(img, (j, i), (j + 50, i + 50), color=(0,255,0))
-                # cv.imshow('test', img)
-                # cv.waitKey(0)
-                # exit()
-            # cv.rectangle(img, (j, i), (j + 50, i + 50), color=(0,0,255))
-            # cv.imshow('test', img)
-            # key = cv.waitKey(1)
-            # if key == 27:#if ESC is pressed, exit loop
-            #     cv.destroyAllWindows()
-            #     exit()
-            # img = clone.copy()
-            # print(img[i][j])
-
-# roi = img[284:334,437:487]
-# cv.imshow('test', roi)
-
-# cv.waitKey(0)
+            
