@@ -3,7 +3,7 @@ import numpy as np
 # from matplotlib import pyplot as plt
 
 # Source images
-source_img = 'data/dataset/emoji_0.jpg'
+source_img = 'emoji_test_many_copies.jpg'
 emoji = 'emoji_template.jpg'
 
 # Threshold of matching 
@@ -29,4 +29,4 @@ w, h = template.shape[::-1]
 for pt in zip(*loc[::-1]):
  cv.rectangle(img_rgb, pt, (pt[0] + w, pt[1] + h), (0, 128, 0), 2)
 # Save to new res.png
-cv.imwrite('Output_found_emojis.png',img_rgb)
+cv.imwrite('output_found_emojis.png',img_rgb)
