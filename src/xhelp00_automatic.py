@@ -7,10 +7,10 @@ def real_time_template_matching(image_path, template_path):
         print(f"Image not found: {image_path}")
         return 2  # Indicate the image does not exist
 
-    original_img = cv2.imread(image_path) #Load target image 
-    template = cv2.imread(template_path, 0) #Load template image in grayscale mode
-    img_gray = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY) #Convert target image into grayscale
-    w, h = template.shape[::-1] #Extract dimensions 
+    original_img = cv2.imread(image_path) # Load target image 
+    template = cv2.imread(template_path, 0) # Load template image in grayscale mode
+    img_gray = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY) # Convert target image into grayscale
+    w, h = template.shape[::-1] # Extract dimensions 
 
     # Perform template matching over the entire image
     res = cv2.matchTemplate(img_gray, template, cv2.TM_CCOEFF_NORMED)
