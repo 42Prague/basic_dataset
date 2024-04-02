@@ -1,0 +1,3 @@
+[submodule "Digiteq_Challenge"]
+	path = Digiteq_Challenge
+	url = git@github.com:adi-io/Digiteq_Challenge.git
