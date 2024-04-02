@@ -3,15 +3,14 @@ CFLAGS = -std=c99 -Wall -Wextra -Werror -Wpedantic
 
 RM := rm -f
 
-SUBPROJECTS := Libft
+SUBPROJECTS := Libft minilibx-linux
+SUBPROJINC := Libft/inc/ minilibx-linux/
 
 INCDIR := .
-INCDIR += $(addsuffix /inc, $(SUBPROJECTS));
+INCDIR += $(SUBPROJINC)
 INCLUDE := $(addprefix -I, $(INCDIR))
 
-LIBS := jpeg
-
-LIBSFLAGS := $(addprefix -l, $(LIBS))
+LIBSFLAGS := -L/usr/lib -lXext -lX11 -lm -lbsd -LLibft -lft -ljpeg
 
 SRCDIR := .
 
@@ -28,7 +27,7 @@ all : $(NAME)
 debug : CFLAGS += -g
 debug : $(NAME)
 
-$(NAME) : $(OBJECTS) Libft/libft.a
+$(NAME) : $(OBJECTS) Libft/libft.a minilibx-linux/libmlx.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBSFLAGS)
 
 Libft/libft.a : | Libft/Makefile
@@ -37,6 +36,9 @@ ifneq (,$(findstring debug, $(MAKECMDGOALS)))
 else
 	$(MAKE) -C Libft
 endif
+
+minilibx-linux/libmlx.a : | minilibx-linux/Makefile
+	$(MAKE) -C minilibx-linux
 
 %.o : %.c | Libft/Makefile
 	$(CC) $(CFLAGS) -o $@ -c $< $(INCLUDE)

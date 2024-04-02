@@ -1,3 +1,6 @@
 [submodule "solution/Libft"]
 	path = solution/Libft
 	url = git://ljiriste.work/Libft
+[submodule "solution/minilibx-linux"]
+	path = solution/minilibx-linux
+	url = https://github.com/Kycilak/minilibx-linux.git
