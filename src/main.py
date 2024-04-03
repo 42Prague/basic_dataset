@@ -1,12 +1,16 @@
+import sys
 import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
- 
+
 # Load image and template
-img_rgb = cv.imread('../data/dataset/emoji_0.jpg')
+if len(sys.argv) != 3:
+	print("usage: <command> <path/to/image> <path/to/template>")
+	exit()
+img_rgb = cv.imread(sys.argv[1])
 assert img_rgb is not None, "file could not be read, check with os.path.exists()"
 img_gray = cv.cvtColor(img_rgb, cv.COLOR_BGR2GRAY)
-template = cv.imread('emoji_template.jpg', cv.IMREAD_GRAYSCALE)
+template = cv.imread(sys.argv[2], cv.IMREAD_GRAYSCALE)
 assert template is not None, "file could not be read, check with os.path.exists()"
 
 # Get template dimensions
