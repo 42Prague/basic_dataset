@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/02 08:44:53 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/02 22:44:46 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/03 19:36:07 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,13 +19,6 @@
 
 #include <stdio.h>
 #include <jpeglib.h>
-
-typedef struct s_rgb
-{
-	unsigned char	r;
-	unsigned char	g;
-	unsigned char	b;
-}					t_rgb;
 
 typedef struct s_mlx_session
 {
@@ -40,69 +33,57 @@ typedef struct s_mlx_data
 	int		bits_per_pixel;
 	int		line_length;
 	int		endian;
+	int		width;
+	int		height;
 }				t_mlx_data;
 
-//	Assumes 3 chanels
-int	read_jpeg(char *filename, t_mat *image)
+void	decompress_to_image(struct jpeg_decompress_struct *cinfo,
+			t_mlx_data *img, void *mlx_ptr)
+{
+	char	*dst;
+
+	img->img = mlx_new_image(mlx_ptr, cinfo->output_width,
+			cinfo->output_height);
+	img->addr = mlx_get_data_addr(img->img, &img->bits_per_pixel,
+			&img->line_length, &img->endian);
+	dst = img->addr;
+	while (cinfo->output_scanline < cinfo->output_height)
+	{
+		jpeg_read_scanlines(cinfo, (JSAMPROW *)&dst, 1);
+		dst += img->line_length;
+	}
+	return ;
+}
+
+//	This function is written as to have
+//	the same signature as mlx_png_file_to_image
+void	*mlx_jpeg_file_to_image(void *mlx_ptr, char *filename,
+			int *width, int *height)
 {
 	struct jpeg_decompress_struct	cinfo;
 	struct jpeg_error_mgr			jerr;
-	JSAMPROW						buffer;
 	FILE							*source;
+	t_mlx_data						img;
 
 	source = fopen(filename, "rb");
 	if (!source)
 	{
 		ft_dprintf(STDERR_FILENO, "Can't open %s\n", filename);
-		return (1);
+		return (NULL);
 	}
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_decompress(&cinfo);
 	jpeg_stdio_src(&cinfo, source);
 	jpeg_read_header(&cinfo, TRUE);
+	cinfo.out_color_space = JCS_EXT_BGRA;
 	jpeg_start_decompress(&cinfo);
-	ft_mat_zeros(image, cinfo.output_height, cinfo.output_width);
-	while (cinfo.output_scanline < cinfo.output_height)
-	{
-		buffer = ft_mat_access(image, cinfo.output_scanline, 0);
-		jpeg_read_scanlines(&cinfo, &buffer, 1);
-	}
+	*width = cinfo.output_width;
+	*height = cinfo.output_height;
+	decompress_to_image(&cinfo, &img, mlx_ptr);
 	jpeg_finish_decompress(&cinfo);
 	jpeg_destroy_decompress(&cinfo);
 	fclose(source);
-	return (0);
-}
-
-unsigned int	rgb_to_uint(t_rgb rgb)
-{
-	unsigned int	res;
-
-	res = 0;
-	res |= rgb.r << (8 * 2);
-	res |= rgb.g << (8 * 1);
-	res |= rgb.b << (8 * 0);
-	return (res);
-}
-
-void	copy_mat_to_mlx_image(t_mat *image, t_mlx_data *mlx_image)
-{
-	char	*dest;
-	size_t	x;
-	size_t	y;
-
-	x = 0;
-	while (x < image->cols)
-	{
-		y = 0;
-		while (y < image->rows)
-		{
-			dest = mlx_image->addr + (y * mlx_image->line_length + x * (mlx_image->bits_per_pixel / 8));
-			*(unsigned int *)dest = rgb_to_uint(*(t_rgb *)ft_mat_access(image, y, x));
-			++y;
-		}
-		++x;
-	}
-	return ;
+	return (img.img);
 }
 
 int	mlx_close_win(t_mlx_session *s)
@@ -135,37 +116,55 @@ int	mlx_handle_key_press(int keycode, t_mlx_session *s)
 
 int	no_event_handle(__attribute__((unused)) t_mlx_session *s)
 {
+/*
+	static size_t	x = 0;
+	static size_t	y = 0;
+
+	if (x + 1 == width)
+	{
+		x = 0;
+		++y;
+	}
+	if (y < height)
+	{
+		mlx_put_image_to_window(s->mlx, s->mlx_win, red_frame, x, y);
+		if (emoji_encountered(image, emoji, x, y))
+		{
+			mlx_put_image_to_window(s->mlx, s->mlx_win, green_frame, x, y);
+			record_pos(state, x, y);
+		}
+		++x;
+	}
+*/
 	return (0);
 }
 
-void	display(t_mat *image, char *filename)
+void	display(char **argv)
 {
 	t_mlx_session	s;
-	t_mlx_data		mlx_image;
+	t_mlx_data		image;
 
 	s.mlx = mlx_init();
-	s.mlx_win = mlx_new_window(s.mlx, image->cols, image->rows, filename);
-	mlx_image.img = mlx_new_image(s.mlx, image->cols, image->rows);
-	mlx_image.addr = mlx_get_data_addr(mlx_image.img, &mlx_image.bits_per_pixel, &mlx_image.line_length, &mlx_image.endian);
-	copy_mat_to_mlx_image(image, &mlx_image);
+	image.img = mlx_jpeg_file_to_image(s.mlx, argv[1],
+			&image.width, &image.height);
+	if (!image.img)
+		return ;
+	image.addr = mlx_get_data_addr(image.img, &image.bits_per_pixel,
+			&image.line_length, &image.endian);
+	s.mlx_win = mlx_new_window(s.mlx, image.width, image.height, argv[1]);
 	mlx_hook(s.mlx_win, KeyPress, KeyPressMask, mlx_handle_key_press, &s);
 	mlx_hook(s.mlx_win, DestroyNotify, NoEventMask, mlx_close_win, &s);
 	mlx_loop_hook(s.mlx, no_event_handle, &s);
-	mlx_put_image_to_window(s.mlx, s.mlx_win, mlx_image.img, 0, 0);
+	mlx_put_image_to_window(s.mlx, s.mlx_win, image.img, 0, 0);
 	mlx_loop(s.mlx);
-	cleanup(&s, &mlx_image);
+	cleanup(&s, &image);
 	return ;
 }
 
 int	main(int argc, char **argv)
 {
-	t_mat			image;
-
 	if (argc != 2)
 		return (1);
-	ft_mat_init(&image, sizeof(t_rgb));
-	read_jpeg(argv[1], &image);
-	display(&image, argv[1]);
-	ft_mat_free(&image, NULL);
+	display(argv);
 	return (0);
 }
