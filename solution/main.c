@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/02 08:44:53 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/03 19:36:07 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/03 22:18:06 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,6 +37,13 @@ typedef struct s_mlx_data
 	int		height;
 }				t_mlx_data;
 
+typedef struct s_graphics
+{
+	t_mlx_session	mlx_ses;
+	t_mlx_data		background;
+	t_mlx_data		red_frame;
+}					t_graphics;
+
 void	decompress_to_image(struct jpeg_decompress_struct *cinfo,
 			t_mlx_data *img, void *mlx_ptr)
 {
@@ -46,6 +53,8 @@ void	decompress_to_image(struct jpeg_decompress_struct *cinfo,
 			cinfo->output_height);
 	img->addr = mlx_get_data_addr(img->img, &img->bits_per_pixel,
 			&img->line_length, &img->endian);
+	img->width = cinfo->output_width;
+	img->height = cinfo->output_height;
 	dst = img->addr;
 	while (cinfo->output_scanline < cinfo->output_height)
 	{
@@ -100,10 +109,13 @@ void	free_session(t_mlx_session *s)
 	return ;
 }
 
-void	cleanup(t_mlx_session *s, t_mlx_data *image)
+void	cleanup(t_graphics *graphics)
 {
-	mlx_destroy_image(s->mlx, image->img);
-	free_session(s);
+	if (graphics->background.img)
+		mlx_destroy_image(graphics->mlx_ses.mlx, graphics->background.img);
+	if (graphics->red_frame.img)
+		mlx_destroy_image(graphics->mlx_ses.mlx, graphics->red_frame.img);
+	free_session(&graphics->mlx_ses);
 	return ;
 }
 
@@ -114,50 +126,64 @@ int	mlx_handle_key_press(int keycode, t_mlx_session *s)
 	return (0);
 }
 
-int	no_event_handle(__attribute__((unused)) t_mlx_session *s)
+int	no_event_handle(t_graphics *g)
 {
-/*
-	static size_t	x = 0;
-	static size_t	y = 0;
+	static int	x = 0;
+	static int	y = 0;
 
-	if (x + 1 == width)
+	if (!g->mlx_ses.mlx_win)
+		return (0);
+	if (x + g->red_frame.width + 1 == g->background.width)
 	{
 		x = 0;
 		++y;
 	}
-	if (y < height)
+	if (y + g->red_frame.height < g->background.height)
 	{
-		mlx_put_image_to_window(s->mlx, s->mlx_win, red_frame, x, y);
+		mlx_put_image_to_window(g->mlx_ses.mlx, g->mlx_ses.mlx_win, g->background.img, 0, 0);
+		mlx_put_image_to_window(g->mlx_ses.mlx, g->mlx_ses.mlx_win, g->red_frame.img, x, y);
+		/*
 		if (emoji_encountered(image, emoji, x, y))
 		{
 			mlx_put_image_to_window(s->mlx, s->mlx_win, green_frame, x, y);
 			record_pos(state, x, y);
 		}
+		*/
 		++x;
 	}
-*/
+	else
+		mlx_close_win(&g->mlx_ses);
 	return (0);
 }
 
 void	display(char **argv)
 {
-	t_mlx_session	s;
-	t_mlx_data		image;
+	t_graphics		graphics;
 
-	s.mlx = mlx_init();
-	image.img = mlx_jpeg_file_to_image(s.mlx, argv[1],
-			&image.width, &image.height);
-	if (!image.img)
-		return ;
-	image.addr = mlx_get_data_addr(image.img, &image.bits_per_pixel,
-			&image.line_length, &image.endian);
-	s.mlx_win = mlx_new_window(s.mlx, image.width, image.height, argv[1]);
-	mlx_hook(s.mlx_win, KeyPress, KeyPressMask, mlx_handle_key_press, &s);
-	mlx_hook(s.mlx_win, DestroyNotify, NoEventMask, mlx_close_win, &s);
-	mlx_loop_hook(s.mlx, no_event_handle, &s);
-	mlx_put_image_to_window(s.mlx, s.mlx_win, image.img, 0, 0);
-	mlx_loop(s.mlx);
-	cleanup(&s, &image);
+	graphics.mlx_ses.mlx = mlx_init();
+	graphics.background.img = mlx_jpeg_file_to_image(graphics.mlx_ses.mlx,
+			argv[1], &graphics.background.width, &graphics.background.height);
+	graphics.red_frame.img = mlx_xpm_file_to_image(graphics.mlx_ses.mlx,
+			"red_frame.xpm", &graphics.red_frame.width, &graphics.red_frame.height);
+	graphics.background.addr = mlx_get_data_addr(graphics.background.img,
+			&graphics.background.bits_per_pixel,
+			&graphics.background.line_length, &graphics.background.endian);
+	if (graphics.background.img && graphics.red_frame.img)
+	{
+		graphics.red_frame.addr = mlx_get_data_addr(graphics.red_frame.img,
+				&graphics.red_frame.bits_per_pixel,
+				&graphics.red_frame.line_length, &graphics.red_frame.endian);
+		graphics.mlx_ses.mlx_win = mlx_new_window(graphics.mlx_ses.mlx,
+				graphics.background.width, graphics.background.height, argv[1]);
+		mlx_hook(graphics.mlx_ses.mlx_win, KeyPress, KeyPressMask,
+				mlx_handle_key_press, &graphics.mlx_ses);
+		mlx_hook(graphics.mlx_ses.mlx_win, DestroyNotify, NoEventMask,
+				mlx_close_win, &graphics.mlx_ses);
+		mlx_loop_hook(graphics.mlx_ses.mlx, no_event_handle, &graphics);
+		mlx_put_image_to_window(graphics.mlx_ses.mlx, graphics.mlx_ses.mlx_win, graphics.background.img, 0, 0);
+		mlx_loop(graphics.mlx_ses.mlx);
+	}
+	cleanup(&graphics);
 	return ;
 }
 
