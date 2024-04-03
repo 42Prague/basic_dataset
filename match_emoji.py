@@ -20,18 +20,19 @@ else:
 	sys.exit()
 
 
-# create template from the image itself; x,y actually give similar result as max_loc
+# create template from the image itself; technically this is also finding the emoji in the image
 values = np.argwhere(img==0) #array where there are values to crop template
 values = np.fliplr(values) #reverse columns
 x, y, w, h = cv.boundingRect(values) #create rectangle around value
 template = img[y:y+h, x:x+h] #crop image from boundingrectangle values
 
-match = cv.matchTemplate(img, template, cv.TM_SQDIFF) #find template in image
+match = cv.matchTemplate(img, template, cv.TM_CCOEFF_NORMED) #find template in image
 match = cv.normalize(match, None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U) #normalize match to display as img
 match = cv.resize(match, (img.shape[1], img.shape[0])) #resize match to have the same number of rows as img
 min_val, max_val, min_loc, max_loc = cv.minMaxLoc(match) #get location of maximum match
 print('Match location :', max_loc, '\nCrop location : ', (x,y))
 
+cv.rectangle(img, (x,y), (x + w, y + h), color=50) #draw rectangle around match
 
 both = cv.hconcat([img, match]) #concatenate image and match result horizontally
 cv.imwrite('comparison.jpg', both)
