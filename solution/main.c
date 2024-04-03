@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/02 08:44:53 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/03 22:20:56 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 00:24:08 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,8 @@
 
 #include <stdio.h>
 #include <jpeglib.h>
+
+#define EMOJI_TRESHOLD 255
 
 typedef struct s_mlx_session
 {
@@ -43,7 +45,22 @@ typedef struct s_graphics
 	t_mlx_session	mlx_ses;
 	t_mlx_data		background;
 	t_mlx_data		red_frame;
+	t_mlx_data		green_frame;
+	t_mlx_data		emoji;
 }					t_graphics;
+
+typedef struct s_position
+{
+	int	x;
+	int	y;
+}		t_position;
+
+typedef struct s_state
+{
+	t_graphics	graph;
+	t_position	pos;
+	t_vec		found;
+}				t_state;
 
 void	decompress_to_image(struct jpeg_decompress_struct *cinfo,
 			t_mlx_data *img, void *mlx_ptr)
@@ -109,7 +126,8 @@ void	flip_alpha(t_mlx_data *img)
 		y = 0;
 		while (y < img->height)
 		{
-			pixel = (char *)img->addr + y * img->line_length + x * img->bits_per_pixel / CHAR_BIT;
+			pixel = (char *)img->addr
+				+ y * img->line_length + x * img->bits_per_pixel / CHAR_BIT;
 			color = uint_to_argb(*(unsigned int *)pixel);
 			color.a = 255 - color.a;
 			*(unsigned int *)pixel = argb_to_uint(color);
@@ -163,9 +181,12 @@ unsigned int	mix_colors(unsigned int back_uint, unsigned int front_uint)
 	back = uint_to_argb(back_uint);
 	front = uint_to_argb(front_uint);
 	res.a = front.a - (255 - back.a) * front.a / 255;
-	res.r = (front.r * (255 - front.a) + back.r * (255 - back.a) * front.a / 255) / (255 - res.a);
-	res.g = (front.g * (255 - front.a) + back.g * (255 - back.a) * front.a / 255) / (255 - res.a);
-	res.b = (front.b * (255 - front.a) + back.b * (255 - back.a) * front.a / 255) / (255 - res.a);
+	res.r = (front.r * (255 - front.a)
+			+ back.r * (255 - back.a) * front.a / 255) / (255 - res.a);
+	res.g = (front.g * (255 - front.a)
+			+ back.g * (255 - back.a) * front.a / 255) / (255 - res.a);
+	res.b = (front.b * (255 - front.a)
+			+ back.b * (255 - back.a) * front.a / 255) / (255 - res.a);
 	return (argb_to_uint(res));
 }
 
@@ -182,9 +203,12 @@ void	copy_image(t_mlx_data *dest, t_mlx_data *src, int x, int y)
 		j = 0;
 		while (j + y < dest->height && j < src->height)
 		{
-			dest_pix = (char *)dest->addr + ((j + y) * dest->line_length + (i + x) * dest->bits_per_pixel / CHAR_BIT);
-			src_pix = (char *)src->addr + (j * src->line_length + i * src->bits_per_pixel / CHAR_BIT);
-			*(unsigned int *)dest_pix = mix_colors(*(unsigned int *)dest_pix, *(unsigned int *)src_pix);
+			dest_pix = (char *)dest->addr + ((j + y) * dest->line_length
+					+ (i + x) * dest->bits_per_pixel / CHAR_BIT);
+			src_pix = (char *)src->addr + (j * src->line_length
+					+ i * src->bits_per_pixel / CHAR_BIT);
+			*(unsigned int *)dest_pix = mix_colors(*(unsigned int *)dest_pix,
+					*(unsigned int *)src_pix);
 			++j;
 		}
 		++i;
@@ -193,7 +217,8 @@ void	copy_image(t_mlx_data *dest, t_mlx_data *src, int x, int y)
 }
 
 //	First use has to be with the largest picture, as that initializes the image
-int	mlx_put_image_to_window_transparency(t_mlx_session *s, t_mlx_data *img, int x, int y)
+int	mlx_put_image_to_window_transparency(t_mlx_session *s, t_mlx_data *img,
+		int x, int y)
 {
 	static t_mlx_data	to_print;
 
@@ -207,7 +232,9 @@ int	mlx_put_image_to_window_transparency(t_mlx_session *s, t_mlx_data *img, int 
 		to_print.img = mlx_new_image(s->mlx, img->width, img->height);
 		if (!to_print.img)
 			return (1);
-		to_print.addr = mlx_get_data_addr(to_print.img, &to_print.bits_per_pixel, &to_print.line_length, &to_print.endian);
+		to_print.addr = mlx_get_data_addr(to_print.img,
+				&to_print.bits_per_pixel, &to_print.line_length,
+				&to_print.endian);
 		to_print.width = img->width;
 		to_print.height = img->height;
 	}
@@ -230,13 +257,22 @@ void	free_session(t_mlx_session *s)
 	return ;
 }
 
-void	cleanup(t_graphics *graphics)
+void	cleanup(t_state *state)
 {
-	if (graphics->background.img)
-		mlx_destroy_image(graphics->mlx_ses.mlx, graphics->background.img);
-	if (graphics->red_frame.img)
-		mlx_destroy_image(graphics->mlx_ses.mlx, graphics->red_frame.img);
-	free_session(&graphics->mlx_ses);
+	if (state->graph.background.img)
+		mlx_destroy_image(state->graph.mlx_ses.mlx,
+			state->graph.background.img);
+	if (state->graph.red_frame.img)
+		mlx_destroy_image(state->graph.mlx_ses.mlx,
+			state->graph.red_frame.img);
+	if (state->graph.green_frame.img)
+		mlx_destroy_image(state->graph.mlx_ses.mlx,
+			state->graph.green_frame.img);
+	if (state->graph.emoji.img)
+		mlx_destroy_image(state->graph.mlx_ses.mlx, state->graph.emoji.img);
+	mlx_put_image_to_window_transparency(&state->graph.mlx_ses, NULL, 0, 0);
+	ft_vec_free(&state->found, NULL);
+	free_session(&state->graph.mlx_ses);
 	return ;
 }
 
@@ -247,64 +283,174 @@ int	mlx_handle_key_press(int keycode, t_mlx_session *s)
 	return (0);
 }
 
-int	no_event_handle(t_graphics *g)
+unsigned int	sqr_diff(unsigned char a, unsigned char b)
 {
-	static int	x = 0;
-	static int	y = 0;
+	if (a > b)
+		return ((a - b) * (a - b));
+	else
+		return ((b - a) * (b - a));
+}
 
-	if (!g->mlx_ses.mlx_win)
-		return (0);
-	if (x + g->red_frame.width + 1 == g->background.width)
+unsigned int	uint_color_sqr_diff(unsigned int uint_color1,
+		unsigned int uint_color2)
+{
+	t_argb			color1;
+	t_argb			color2;
+	unsigned int	res;
+
+	color1 = uint_to_argb(uint_color1);
+	color2 = uint_to_argb(uint_color2);
+	res = 0;
+	res += sqr_diff(color1.r, color2.r) / 255
+		* (255 - color1.a) * (255 - color2.a) / 255;
+	res += sqr_diff(color1.g, color2.g) / 255
+		* (255 - color1.a) * (255 - color2.a) / 255;
+	res += sqr_diff(color1.b, color2.b) / 255
+		* (255 - color1.a) * (255 - color2.a) / 255;
+	return (res);
+}
+
+int	emoji_encountered(t_mlx_data *background, t_mlx_data *emoji, int x, int y)
+{
+	int				i;
+	int				j;
+	char			*pix_emoji;
+	char			*pix_back;
+	unsigned int	sqr_diff;
+
+	sqr_diff = 0;
+	i = 0;
+	while (i < emoji->width)
 	{
-		x = 0;
-		++y;
-	}
-	if (y + g->red_frame.height < g->background.height)
-	{
-		mlx_put_image_to_window_transparency(&g->mlx_ses, &g->background, 0, 0);
-		mlx_put_image_to_window_transparency(&g->mlx_ses, &g->red_frame, x, y);
-		/*
-		if (emoji_encountered(image, emoji, x, y))
+		j = 0;
+		while (j < emoji->height)
 		{
-			mlx_put_image_to_window_transparency(s->mlx, s->mlx_win, green_frame, x, y);
-			record_pos(state, x, y);
+			pix_emoji = (char *)emoji->addr
+				+ j * emoji->line_length
+				+ i * emoji->bits_per_pixel / CHAR_BIT;
+			pix_back = (char *)background->addr
+				+ (j + y) * background->line_length
+				+ (i + x) * background->bits_per_pixel / CHAR_BIT;
+			sqr_diff += uint_color_sqr_diff(*(unsigned int *)pix_emoji,
+					*(unsigned int *)pix_back);
+			++j;
 		}
-		*/
-		++x;
+		++i;
+	}
+	sqr_diff /= emoji->width * emoji->height;
+	return (sqr_diff < EMOJI_TRESHOLD);
+}
+
+void	print_green_frames(t_state *state)
+{
+	t_position	pos;
+	size_t		i;
+
+	i = 0;
+	while (i < state->found.size)
+	{
+		pos = *(t_position *)ft_vec_access(&state->found, i);
+		mlx_put_image_to_window_transparency(&state->graph.mlx_ses,
+			&state->graph.green_frame, pos.x, pos.y);
+		++i;
+	}
+	return ;
+}
+
+int	no_event_handle(t_state *state)
+{
+	if (!state->graph.mlx_ses.mlx_win)
+		return (0);
+	if (state->pos.x + state->graph.emoji.width > state->graph.background.width)
+	{
+		state->pos.x = 0;
+		++state->pos.y;
+	}
+	if (state->pos.y + state->graph.emoji.height
+		<= state->graph.background.height)
+	{
+		mlx_put_image_to_window_transparency(&state->graph.mlx_ses,
+			&state->graph.background, 0, 0);
+		print_green_frames(state);
+		mlx_put_image_to_window_transparency(&state->graph.mlx_ses,
+			&state->graph.red_frame, state->pos.x, state->pos.y);
+		if (emoji_encountered(&state->graph.background,
+				&state->graph.emoji, state->pos.x, state->pos.y))
+			ft_vec_append(&state->found, &state->pos);
+		++state->pos.x;
 	}
 	else
-		mlx_close_win(&g->mlx_ses);
+		mlx_close_win(&state->graph.mlx_ses);
 	return (0);
+}
+
+void	set_addresses(t_graphics *graphics)
+{
+	graphics->background.addr = mlx_get_data_addr(graphics->background.img,
+			&graphics->background.bits_per_pixel,
+			&graphics->background.line_length, &graphics->background.endian);
+	graphics->red_frame.addr = mlx_get_data_addr(graphics->red_frame.img,
+			&graphics->red_frame.bits_per_pixel,
+			&graphics->red_frame.line_length, &graphics->red_frame.endian);
+	graphics->green_frame.addr = mlx_get_data_addr(graphics->green_frame.img,
+			&graphics->green_frame.bits_per_pixel,
+			&graphics->green_frame.line_length, &graphics->green_frame.endian);
+	graphics->emoji.addr = mlx_get_data_addr(graphics->emoji.img,
+			&graphics->emoji.bits_per_pixel,
+			&graphics->emoji.line_length, &graphics->emoji.endian);
+	return ;
+}
+
+int	open_images(t_graphics *graphics, char **argv)
+{
+	int	res;
+
+	graphics->background.img = mlx_jpeg_file_to_image(graphics->mlx_ses.mlx,
+			argv[1], &graphics->background.width,
+			&graphics->background.height);
+	graphics->red_frame.img = mlx_xpm_file_to_image(graphics->mlx_ses.mlx,
+			"red_frame.xpm", &graphics->red_frame.width,
+			&graphics->red_frame.height);
+	graphics->green_frame.img = mlx_xpm_file_to_image(graphics->mlx_ses.mlx,
+			"green_frame.xpm", &graphics->green_frame.width,
+			&graphics->green_frame.height);
+	graphics->emoji.img = mlx_xpm_file_to_image(graphics->mlx_ses.mlx,
+			"emoji.xpm", &graphics->emoji.width, &graphics->emoji.height);
+	res = graphics->background.img && graphics->red_frame.img
+		&& graphics->green_frame.img && graphics->emoji.img;
+	if (res)
+		set_addresses(graphics);
+	return (!res);
+}
+
+int	init_state(t_state *state)
+{
+	state->graph.mlx_ses.mlx = mlx_init();
+	state->pos.x = 0;
+	state->pos.y = 0;
+	return (ft_vec_init(&state->found, sizeof(t_position)) != success
+		|| !state->graph.mlx_ses.mlx);
 }
 
 void	display(char **argv)
 {
-	t_graphics		graphics;
+	t_state	state;
 
-	graphics.mlx_ses.mlx = mlx_init();
-	graphics.background.img = mlx_jpeg_file_to_image(graphics.mlx_ses.mlx,
-			argv[1], &graphics.background.width, &graphics.background.height);
-	graphics.red_frame.img = mlx_xpm_file_to_image(graphics.mlx_ses.mlx,
-			"red_frame.xpm", &graphics.red_frame.width, &graphics.red_frame.height);
-	graphics.background.addr = mlx_get_data_addr(graphics.background.img,
-			&graphics.background.bits_per_pixel,
-			&graphics.background.line_length, &graphics.background.endian);
-	if (graphics.background.img && graphics.red_frame.img)
+	if (!init_state(&state) && !open_images(&state.graph, argv))
 	{
-		graphics.red_frame.addr = mlx_get_data_addr(graphics.red_frame.img,
-				&graphics.red_frame.bits_per_pixel,
-				&graphics.red_frame.line_length, &graphics.red_frame.endian);
-		graphics.mlx_ses.mlx_win = mlx_new_window(graphics.mlx_ses.mlx,
-				graphics.background.width, graphics.background.height, argv[1]);
-		mlx_hook(graphics.mlx_ses.mlx_win, KeyPress, KeyPressMask,
-				mlx_handle_key_press, &graphics.mlx_ses);
-		mlx_hook(graphics.mlx_ses.mlx_win, DestroyNotify, NoEventMask,
-				mlx_close_win, &graphics.mlx_ses);
-		mlx_loop_hook(graphics.mlx_ses.mlx, no_event_handle, &graphics);
-		mlx_put_image_to_window_transparency(&graphics.mlx_ses, &graphics.background, 0, 0);
-		mlx_loop(graphics.mlx_ses.mlx);
+		state.graph.mlx_ses.mlx_win = mlx_new_window(state.graph.mlx_ses.mlx,
+				state.graph.background.width,
+				state.graph.background.height, argv[1]);
+		mlx_hook(state.graph.mlx_ses.mlx_win, KeyPress, KeyPressMask,
+			mlx_handle_key_press, &state.graph.mlx_ses);
+		mlx_hook(state.graph.mlx_ses.mlx_win, DestroyNotify, NoEventMask,
+			mlx_close_win, &state.graph.mlx_ses);
+		mlx_loop_hook(state.graph.mlx_ses.mlx, no_event_handle, &state);
+		mlx_put_image_to_window_transparency(&state.graph.mlx_ses,
+			&state.graph.background, 0, 0);
+		mlx_loop(state.graph.mlx_ses.mlx);
 	}
-	cleanup(&graphics);
+	cleanup(&state);
 	return ;
 }
 
