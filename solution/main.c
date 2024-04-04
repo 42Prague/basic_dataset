@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/02 08:44:53 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/04 09:49:01 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 10:13:23 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -223,7 +223,7 @@ void	copy_image(t_mlx_data *dest, t_mlx_data *src, int x, int y)
 }
 
 //	First use has to be with the largest picture, as that initializes the image
-int	mlx_put_image_to_window_transparency(t_mlx_session *s, t_mlx_data *img,
+int	display_trans_img(t_mlx_session *s, t_mlx_data *img,
 		int x, int y)
 {
 	static t_mlx_data	to_print;
@@ -276,7 +276,7 @@ void	cleanup(t_state *state)
 			state->graph.green_frame.img);
 	if (state->graph.emoji.img)
 		mlx_destroy_image(state->graph.mlx_ses.mlx, state->graph.emoji.img);
-	mlx_put_image_to_window_transparency(&state->graph.mlx_ses, NULL, 0, 0);
+	display_trans_img(&state->graph.mlx_ses, NULL, 0, 0);
 	ft_vec_free(&state->found, NULL);
 	free_session(&state->graph.mlx_ses);
 	return ;
@@ -351,37 +351,44 @@ void	print_green_frames(t_state *state)
 	while (i < state->found.size)
 	{
 		pos = *(t_position *)ft_vec_access(&state->found, i);
-		mlx_put_image_to_window_transparency(&state->graph.mlx_ses,
+		display_trans_img(&state->graph.mlx_ses,
 			&state->graph.green_frame, pos.x, pos.y);
 		++i;
 	}
 	return ;
 }
 
+void	record_found(t_vec *found, t_position pos)
+{
+	ft_vec_append(found, &pos);
+	ft_printf("Target at (%4i, %4i).\n", pos.x, pos.y);
+	return ;
+}
+
 int	no_event_handle(t_state *state)
 {
-	if (!state->graph.mlx_ses.mlx_win)
+	t_graphics *const	g = &state->graph;
+
+	if (!g->mlx_ses.mlx_win)
 		return (0);
-	if (state->pos.x + state->graph.emoji.width > state->graph.background.width)
+	if (state->pos.x + g->emoji.width > g->background.width)
 	{
 		state->pos.x = 0;
 		++state->pos.y;
 	}
-	if (state->pos.y + state->graph.emoji.height
-		<= state->graph.background.height)
+	if (state->pos.y + g->emoji.height <= g->background.height)
 	{
-		mlx_put_image_to_window_transparency(&state->graph.mlx_ses,
-			&state->graph.background, 0, 0);
+		display_trans_img(&g->mlx_ses, &g->background, 0, 0);
 		print_green_frames(state);
-		mlx_put_image_to_window_transparency(&state->graph.mlx_ses,
-			&state->graph.red_frame, state->pos.x, state->pos.y);
-		if (emoji_encountered(&state->graph.background,
-				&state->graph.emoji, state->pos.x, state->pos.y))
-			ft_vec_append(&state->found, &state->pos);
+		display_trans_img(&g->mlx_ses, &g->red_frame,
+			state->pos.x, state->pos.y);
+		if (emoji_encountered(&g->background, &g->emoji,
+				state->pos.x, state->pos.y))
+			record_found(&state->found, state->pos);
 		++state->pos.x;
 	}
 	else
-		mlx_close_win(&state->graph.mlx_ses);
+		mlx_close_win(&g->mlx_ses);
 	return (0);
 }
 
@@ -469,7 +476,7 @@ int	init_state(t_state *state)
 
 void	display(char **argv)
 {
-	t_state	state;
+	t_state				state;
 
 	if (!init_state(&state) && !open_images(&state.graph, argv))
 	{
@@ -481,8 +488,7 @@ void	display(char **argv)
 		mlx_hook(state.graph.mlx_ses.mlx_win, DestroyNotify, NoEventMask,
 			mlx_close_win, &state.graph.mlx_ses);
 		mlx_loop_hook(state.graph.mlx_ses.mlx, no_event_handle, &state);
-		mlx_put_image_to_window_transparency(&state.graph.mlx_ses,
-			&state.graph.background, 0, 0);
+		display_trans_img(&state.graph.mlx_ses, &state.graph.background, 0, 0);
 		mlx_loop(state.graph.mlx_ses.mlx);
 	}
 	cleanup(&state);
