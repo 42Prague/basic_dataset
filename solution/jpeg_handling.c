@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/04 10:21:40 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/04 10:36:49 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 10:52:14 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,7 +74,7 @@ void	*mlx_jpeg_file_to_image(void *mlx_ptr, char *filename,
 	source = fopen(filename, "rb");
 	if (!source)
 	{
-		ft_dprintf(STDERR_FILENO, "Can't open %s\n", filename);
+		ft_dprintf(STDERR_FILENO, "Cannot open %s\n", filename);
 		return (NULL);
 	}
 	cinfo.err = jpeg_std_error(&jerr);

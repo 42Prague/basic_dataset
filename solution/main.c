@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/02 08:44:53 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/04 10:47:06 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 10:58:21 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,12 @@ void	display(char **argv)
 int	main(int argc, char **argv)
 {
 	if (argc != 2)
+	{
+		ft_printf("Wrong invocation, it should be done as follows:\n"
+				"\t%s source_jpeg\n",
+				argv[0]);
 		return (1);
+	}
 	display(argv);
 	return (0);
 }
