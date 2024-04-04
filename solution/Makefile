@@ -14,7 +14,14 @@ LIBSFLAGS := -L/usr/lib -lXext -lX11 -lm -lbsd -LLibft -lft -ljpeg
 
 SRCDIR := .
 
-SOURCES :=	main.c			\
+SOURCES :=	main.c				\
+			color.c				\
+			jpeg_handling.c		\
+			images.c			\
+			mlx_addition.c		\
+			event_handling.c	\
+			convolution.c		\
+			cleanup.c			\
 
 SOURCES := $(addprefix $(SRCDIR)/, $(SOURCES))
 
