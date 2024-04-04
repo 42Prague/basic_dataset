@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/04 10:27:01 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/04 10:37:03 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 10:48:19 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,8 @@ int	display_trans_img(t_mlx_session *s, t_mlx_data *img,
 
 	if (!s->mlx_win)
 	{
-		mlx_destroy_image(s->mlx, to_print.img);
+		if (to_print.img)
+			mlx_destroy_image(s->mlx, to_print.img);
 		return (0);
 	}
 	if (!to_print.img)

@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/02 08:44:53 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/04 10:38:20 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 10:47:06 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 int	init_state(t_state *state)
 {
 	state->graph.mlx_ses.mlx = mlx_init();
+	state->graph.mlx_ses.mlx_win = NULL;
 	state->pos.x = 0;
 	state->pos.y = 0;
 	return (ft_vec_init(&state->found, sizeof(t_position)) != success
