@@ -71,13 +71,13 @@ def findOne(file, height, width, emoji, k):
                     j2 = 750
                 check = checkSquares(img, emoji, i, j, i2, j2) # Checks if any of the squares contain emoji, if yes, return coordinates
                 if check[0] != -1 and check[1] != -1:
-                    print("%d,%s,['happy'],[%d],[%d]" % (k, file, check[0], check[1]))
+                    print("%d,%s,['happy'],[%d],[%d]" % (k, file, check[0], check[1])) # Output for easy importing to spreadsheet
                     cv.rectangle(img, (check[0], check[1]), (check[0] + 50, check[1] + 50), color=(0,255,0))  # Uncomment this to show found image
                     cv.imshow('Found', img)
                     cv.waitKey(0)
                     exit()
                 if i % 4 == 0 and j % 4 == 0: # show the moving squares, except it's a bit slow, so it doesn't show on every pixel refresh
-                    cv.rectangle(img, (j, i), (j + 50, i + 50), color=(0,0,255))
+                    cv.rectangle(img, (j, i), (j + 50, i + 50), color=(0,0,255)) # More squares, more fast, allegedly
                     cv.rectangle(img, (j2, i), (j2 + 50, i + 50), color=(0,0,255))
                     cv.rectangle(img, (j, i2), (j + 50, i2 + 50), color=(0,0,255))
                     cv.rectangle(img, (j2, i2), (j2 + 50, i2 + 50), color=(0,0,255))
@@ -91,9 +91,9 @@ def findOne(file, height, width, emoji, k):
 #Compares the current area of interest with the emoji
 def checkForEmoji(img, emoji, X, Y):
     roi = img[Y:Y+50, X:X+50]
-    diff = cv.subtract(roi, emoji)
-    diff = diff.astype(np.uint8)
-    if np.count_nonzero(diff) < 2700:
+    diff = cv.subtract(roi, emoji) # Difference of pixels in the image
+    diff = diff.astype(np.uint8) # Convert to simple number
+    if np.count_nonzero(diff) < 2700: # Very arbitrery number that I chose as a threshold to find the same image
         return X, Y
     return -1, -1
 
