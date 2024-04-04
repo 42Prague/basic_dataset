@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/02 08:44:53 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/04 10:58:21 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 11:33:20 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,10 @@ int	init_state(t_state *state)
 	state->graph.mlx_ses.mlx_win = NULL;
 	state->pos.x = 0;
 	state->pos.y = 0;
+	state->graph.background.img = NULL;
+	state->graph.emoji.img = NULL;
+	state->graph.red_frame.img = NULL;
+	state->graph.green_frame.img = NULL;
 	return (ft_vec_init(&state->found, sizeof(t_position)) != success
 		|| !state->graph.mlx_ses.mlx);
 }
@@ -48,11 +52,11 @@ void	display(char **argv)
 
 int	main(int argc, char **argv)
 {
-	if (argc != 2)
+	if (argc != 3)
 	{
 		ft_printf("Wrong invocation, it should be done as follows:\n"
-				"\t%s source_jpeg\n",
-				argv[0]);
+			"\t%s source_jpeg target_jpeg\n",
+			argv[0]);
 		return (1);
 	}
 	display(argv);

@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/04 10:29:22 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/04 10:31:33 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 11:30:16 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,12 +73,16 @@ int	open_images(t_graphics *graphics, char **argv)
 	graphics->background.img = mlx_jpeg_file_to_image(graphics->mlx_ses.mlx,
 			argv[1], &graphics->background.width,
 			&graphics->background.height);
-	graphics->emoji.img = mlx_xpm_file_to_image(graphics->mlx_ses.mlx,
-			"emoji.xpm", &graphics->emoji.width, &graphics->emoji.height);
-	graphics->red_frame = create_frame_img(graphics->mlx_ses.mlx,
-			graphics->emoji.width, graphics->emoji.height, 0x80FF0000);
-	graphics->green_frame = create_frame_img(graphics->mlx_ses.mlx,
-			graphics->emoji.width, graphics->emoji.height, 0x8000FF00);
+	graphics->emoji.img = mlx_jpeg_file_to_image(graphics->mlx_ses.mlx,
+			argv[2], &graphics->emoji.width,
+			&graphics->emoji.height);
+	if (graphics->emoji.img)
+	{
+		graphics->red_frame = create_frame_img(graphics->mlx_ses.mlx,
+				graphics->emoji.width, graphics->emoji.height, 0x80FF0000);
+		graphics->green_frame = create_frame_img(graphics->mlx_ses.mlx,
+				graphics->emoji.width, graphics->emoji.height, 0x8000FF00);
+	}
 	res = graphics->background.img && graphics->red_frame.img
 		&& graphics->green_frame.img && graphics->emoji.img;
 	if (res)

@@ -6,13 +6,14 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/04 10:21:40 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/04 10:52:14 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 11:40:47 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "digiteq.h"
 #include <mlx.h>
 #include <unistd.h>
+#include <setjmp.h>
 
 #include <stdio.h>
 #include <jpeglib.h>
@@ -61,13 +62,18 @@ static void	flip_alpha(t_mlx_data *img)
 	return ;
 }
 
+static void	my_error_exit(j_common_ptr cinfo)
+{
+	longjmp(((t_jpeg_error *)cinfo->err)->setjmp_buffer, 1);
+}
+
 //	This function is written as to have
 //	the same signature as mlx_png_file_to_image
 void	*mlx_jpeg_file_to_image(void *mlx_ptr, char *filename,
 			int *width, int *height)
 {
 	struct jpeg_decompress_struct	cinfo;
-	struct jpeg_error_mgr			jerr;
+	t_jpeg_error					jerr;
 	FILE							*source;
 	t_mlx_data						img;
 
@@ -77,7 +83,17 @@ void	*mlx_jpeg_file_to_image(void *mlx_ptr, char *filename,
 		ft_dprintf(STDERR_FILENO, "Cannot open %s\n", filename);
 		return (NULL);
 	}
-	cinfo.err = jpeg_std_error(&jerr);
+	cinfo.err = jpeg_std_error(&jerr.common);
+	jerr.common.error_exit = my_error_exit;
+	if (setjmp(jerr.setjmp_buffer))
+	{
+		fclose(source);
+		ft_dprintf(STDERR_FILENO, "%s: ", filename);
+		cinfo.err->output_message((j_common_ptr)(&cinfo));
+		ft_dprintf(STDERR_FILENO, "\n");
+		jpeg_destroy_decompress(&cinfo);
+		return (NULL);
+	}
 	jpeg_create_decompress(&cinfo);
 	jpeg_stdio_src(&cinfo, source);
 	jpeg_read_header(&cinfo, TRUE);

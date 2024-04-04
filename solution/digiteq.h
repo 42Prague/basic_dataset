@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/04 10:14:39 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/04 10:36:18 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 11:40:32 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,9 +14,19 @@
 # define DIGITEQ_H
 
 # include "libft.h"
+# include <setjmp.h>
+
+# include <stdio.h>
+# include <jpeglib.h>
 
 # define EMOJI_TRESHOLD 255
 # define FRAME_THICKNESS 2
+
+typedef struct s_jpeg_error
+{
+	struct jpeg_error_mgr	common;
+	jmp_buf					setjmp_buffer;
+}							t_jpeg_error;
 
 typedef struct s_mlx_session
 {
