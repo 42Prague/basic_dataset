@@ -40,7 +40,7 @@ endif
 minilibx-linux/libmlx.a : | minilibx-linux/Makefile
 	$(MAKE) -C minilibx-linux
 
-%.o : %.c | Libft/Makefile
+%.o : %.c | Libft/Makefile minilibx-linux/Makefile
 	$(CC) $(CFLAGS) -o $@ -c $< $(INCLUDE)
 
 %/Makefile :
