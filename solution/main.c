@@ -6,7 +6,7 @@
 /*   By: ljiriste <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/02 08:44:53 by ljiriste          #+#    #+#             */
-/*   Updated: 2024/04/04 00:24:08 by ljiriste         ###   ########.fr       */
+/*   Updated: 2024/04/04 09:49:01 by ljiriste         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,7 @@
 #include <jpeglib.h>
 
 #define EMOJI_TRESHOLD 255
+#define FRAME_THICKNESS 2
 
 typedef struct s_mlx_session
 {
@@ -61,6 +62,14 @@ typedef struct s_state
 	t_position	pos;
 	t_vec		found;
 }				t_state;
+
+unsigned int	*get_mlx_pixel(t_mlx_data *img, int x, int y)
+{
+	char	*res;
+
+	res = img->addr + y * img->line_length + x * img->bits_per_pixel / CHAR_BIT;
+	return ((unsigned int *)res);
+}
 
 void	decompress_to_image(struct jpeg_decompress_struct *cinfo,
 			t_mlx_data *img, void *mlx_ptr)
@@ -115,10 +124,10 @@ unsigned int	argb_to_uint(t_argb color)
 
 void	flip_alpha(t_mlx_data *img)
 {
-	char	*pixel;
-	int		x;
-	int		y;
-	t_argb	color;
+	unsigned int	*pixel;
+	int				x;
+	int				y;
+	t_argb			color;
 
 	x = 0;
 	while (x < img->width)
@@ -126,11 +135,10 @@ void	flip_alpha(t_mlx_data *img)
 		y = 0;
 		while (y < img->height)
 		{
-			pixel = (char *)img->addr
-				+ y * img->line_length + x * img->bits_per_pixel / CHAR_BIT;
-			color = uint_to_argb(*(unsigned int *)pixel);
+			pixel = get_mlx_pixel(img, x, y);
+			color = uint_to_argb(*pixel);
 			color.a = 255 - color.a;
-			*(unsigned int *)pixel = argb_to_uint(color);
+			*pixel = argb_to_uint(color);
 			++y;
 		}
 		++x;
@@ -192,10 +200,10 @@ unsigned int	mix_colors(unsigned int back_uint, unsigned int front_uint)
 
 void	copy_image(t_mlx_data *dest, t_mlx_data *src, int x, int y)
 {
-	char	*dest_pix;
-	char	*src_pix;
-	int		i;
-	int		j;
+	unsigned int	*dest_pix;
+	unsigned int	*src_pix;
+	int				i;
+	int				j;
 
 	i = 0;
 	while (i + x < dest->width && i < src->width)
@@ -203,12 +211,10 @@ void	copy_image(t_mlx_data *dest, t_mlx_data *src, int x, int y)
 		j = 0;
 		while (j + y < dest->height && j < src->height)
 		{
-			dest_pix = (char *)dest->addr + ((j + y) * dest->line_length
-					+ (i + x) * dest->bits_per_pixel / CHAR_BIT);
-			src_pix = (char *)src->addr + (j * src->line_length
-					+ i * src->bits_per_pixel / CHAR_BIT);
-			*(unsigned int *)dest_pix = mix_colors(*(unsigned int *)dest_pix,
-					*(unsigned int *)src_pix);
+			dest_pix = get_mlx_pixel(dest, x + i, y + j);
+			src_pix = get_mlx_pixel(src, i, j);
+			*dest_pix = mix_colors(*dest_pix,
+					*src_pix);
 			++j;
 		}
 		++i;
@@ -314,8 +320,8 @@ int	emoji_encountered(t_mlx_data *background, t_mlx_data *emoji, int x, int y)
 {
 	int				i;
 	int				j;
-	char			*pix_emoji;
-	char			*pix_back;
+	unsigned int	*pix_emoji;
+	unsigned int	*pix_back;
 	unsigned int	sqr_diff;
 
 	sqr_diff = 0;
@@ -325,14 +331,9 @@ int	emoji_encountered(t_mlx_data *background, t_mlx_data *emoji, int x, int y)
 		j = 0;
 		while (j < emoji->height)
 		{
-			pix_emoji = (char *)emoji->addr
-				+ j * emoji->line_length
-				+ i * emoji->bits_per_pixel / CHAR_BIT;
-			pix_back = (char *)background->addr
-				+ (j + y) * background->line_length
-				+ (i + x) * background->bits_per_pixel / CHAR_BIT;
-			sqr_diff += uint_color_sqr_diff(*(unsigned int *)pix_emoji,
-					*(unsigned int *)pix_back);
+			pix_emoji = get_mlx_pixel(emoji, i, j);
+			pix_back = get_mlx_pixel(background, x + i, y + j);
+			sqr_diff += uint_color_sqr_diff(*pix_emoji, *pix_back);
 			++j;
 		}
 		++i;
@@ -389,16 +390,52 @@ void	set_addresses(t_graphics *graphics)
 	graphics->background.addr = mlx_get_data_addr(graphics->background.img,
 			&graphics->background.bits_per_pixel,
 			&graphics->background.line_length, &graphics->background.endian);
-	graphics->red_frame.addr = mlx_get_data_addr(graphics->red_frame.img,
-			&graphics->red_frame.bits_per_pixel,
-			&graphics->red_frame.line_length, &graphics->red_frame.endian);
-	graphics->green_frame.addr = mlx_get_data_addr(graphics->green_frame.img,
-			&graphics->green_frame.bits_per_pixel,
-			&graphics->green_frame.line_length, &graphics->green_frame.endian);
 	graphics->emoji.addr = mlx_get_data_addr(graphics->emoji.img,
 			&graphics->emoji.bits_per_pixel,
 			&graphics->emoji.line_length, &graphics->emoji.endian);
 	return ;
+}
+
+void	fill_frame(t_mlx_data *frame, unsigned int color)
+{
+	unsigned int	*pix;
+	int				x;
+	int				y;
+
+	x = 0;
+	while (x < frame->width)
+	{
+		y = 0;
+		while (y < frame->height)
+		{
+			pix = get_mlx_pixel(frame, x, y);
+			if (x < FRAME_THICKNESS || y < FRAME_THICKNESS
+				|| frame->width - x <= FRAME_THICKNESS
+				|| frame->height - y <= FRAME_THICKNESS)
+				*pix = color;
+			else
+				*pix = 0xFFFFFFFF;
+			++y;
+		}
+		++x;
+	}
+	return ;
+}
+
+t_mlx_data	create_frame_img(void *mlx_ptr,
+		int width, int height, unsigned int color)
+{
+	t_mlx_data		frame;
+
+	frame.img = mlx_new_image(mlx_ptr, width, height);
+	if (!frame.img)
+		return (frame);
+	frame.width = width;
+	frame.height = height;
+	frame.addr = mlx_get_data_addr(frame.img, &frame.bits_per_pixel,
+			&frame.line_length, &frame.endian);
+	fill_frame(&frame, color);
+	return (frame);
 }
 
 int	open_images(t_graphics *graphics, char **argv)
@@ -408,14 +445,12 @@ int	open_images(t_graphics *graphics, char **argv)
 	graphics->background.img = mlx_jpeg_file_to_image(graphics->mlx_ses.mlx,
 			argv[1], &graphics->background.width,
 			&graphics->background.height);
-	graphics->red_frame.img = mlx_xpm_file_to_image(graphics->mlx_ses.mlx,
-			"red_frame.xpm", &graphics->red_frame.width,
-			&graphics->red_frame.height);
-	graphics->green_frame.img = mlx_xpm_file_to_image(graphics->mlx_ses.mlx,
-			"green_frame.xpm", &graphics->green_frame.width,
-			&graphics->green_frame.height);
 	graphics->emoji.img = mlx_xpm_file_to_image(graphics->mlx_ses.mlx,
 			"emoji.xpm", &graphics->emoji.width, &graphics->emoji.height);
+	graphics->red_frame = create_frame_img(graphics->mlx_ses.mlx,
+			graphics->emoji.width, graphics->emoji.height, 0x80FF0000);
+	graphics->green_frame = create_frame_img(graphics->mlx_ses.mlx,
+			graphics->emoji.width, graphics->emoji.height, 0x8000FF00);
 	res = graphics->background.img && graphics->red_frame.img
 		&& graphics->green_frame.img && graphics->emoji.img;
 	if (res)
